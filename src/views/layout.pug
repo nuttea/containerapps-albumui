@@ -1,11 +1,224 @@
 html
   head
+    //- ============================================================================
+    //- DATADOG RUM (Real User Monitoring) - Frontend Observability
+    //- ============================================================================
+    //- Initialize Datadog RUM to monitor frontend performance and user experience
+    //- Documentation: https://docs.datadoghq.com/real_user_monitoring/browser/
+    //- ============================================================================
+    if process.env.DD_RUM_APPLICATION_ID && process.env.DD_RUM_CLIENT_TOKEN
+      script.
+        (function(h,o,u,n,d) {
+          h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+          d=o.createElement(u);d.async=1;d.src=n
+          n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+        })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v5/datadog-rum.js','DD_RUM')
+        
+        window.DD_RUM.onReady(function() {
+          window.DD_RUM.init({
+            // RUM Application credentials from environment
+            clientToken: '#{process.env.DD_RUM_CLIENT_TOKEN}',
+            applicationId: '#{process.env.DD_RUM_APPLICATION_ID}',
+            
+            // Datadog site (e.g., datadoghq.com, us5.datadoghq.com)
+            site: '#{process.env.DD_SITE || "datadoghq.com"}',
+            
+            // Service, environment, and version for correlation with APM
+            service: '#{process.env.DD_SERVICE || "albumui-frontend"}',
+            env: '#{process.env.DD_ENV || "production"}',
+            version: '#{process.env.DD_VERSION || "1.0"}',
+            
+            // Session sampling - 100% of sessions
+            sessionSampleRate: 100,
+            
+            // Premium sampling - Session Replay for 20% of sessions
+            sessionReplaySampleRate: 100,
+            
+            // Track user interactions (clicks, inputs, navigation)
+            trackUserInteractions: true,
+            
+            // Track resources (images, CSS, JS, XHR, Fetch)
+            trackResources: true,
+            
+            // Track long tasks (JavaScript execution > 50ms)
+            trackLongTasks: true,
+            
+            // Track frontend errors
+            trackFrustrations: true,
+            
+            // Default privacy level for session replay
+            defaultPrivacyLevel: 'mask-user-input',
+            
+            // Correlate RUM with APM traces
+            allowedTracingUrls: [
+              { match: window.location.origin, propagatorTypes: ["datadog"] },
+              // Add your backend API URL here for full-stack tracing
+              //{ match: '#{process.env.API_BASE_URL || ""}', propagatorTypes: ["datadog"] }
+              '#{process.env.API_BASE_URL || ""}'
+            ]
+          });
+          
+          // Start session recording
+          window.DD_RUM.startSessionReplayRecording();
+          
+          console.log('Datadog RUM initialized', {
+            service: '#{process.env.DD_SERVICE || "albumui-frontend"}',
+            env: '#{process.env.DD_ENV || "production"}'
+          });
+        });
+    else
+      script.
+        console.log('Datadog RUM not initialized - missing credentials');
+    //- ============================================================================
+    
     link(rel="stylesheet" href="https://cdn.rtlcss.com/semantic-ui/2.4.1/semantic.rtl.min.css")
     link(rel='stylesheet' href="/stylesheets/style.css")
     link(rel='icon' href='/images/favicon.svg')
+    
+    //- jQuery and Semantic UI JS (required for modals and interactions)
+    script(src="https://code.jquery.com/jquery-3.6.0.min.js")
+    script(src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.min.js")
 
   body(style="background-color:"+background_color)
    div(class="ui container")
+    //- Environment Variables Menu Bar
+    div(class="ui top attached menu" style="margin-top: 10px;")
+      a(class="item" onclick="toggleEnvVars()" style="cursor: pointer;")
+        i(class="cog icon")
+        | Environment Variables
+        i(id="envVarsChevron" class="chevron down icon" style="margin-left: 5px;")
+      div(class="right menu")
+        div(class="item" style="padding: 0 10px;")
+          div(class="ui label")
+            i(class="server icon")
+            | #{process.env.DD_SERVICE || 'unknown'}
+          div(class="ui label" style="margin-left: 5px;")
+            i(class="tag icon")
+            | #{process.env.DD_ENV || 'unknown'}
+    
+    //- Collapsible Environment Variables Panel
+    div(id="envVarsPanel" class="ui attached segment" style="display: none; max-height: 400px; overflow-y: auto;")
+      h4(class="ui dividing header")
+        i(class="info circle icon")
+        | Current Configuration
+      
+      div(class="ui two column stackable grid")
+        div(class="column")
+          h5(class="ui header") Datadog Configuration
+          table(class="ui very basic compact table")
+            tbody
+              tr
+                td(style="font-weight: bold;") DD_SERVICE
+                td(class="right aligned")
+                  code #{process.env.DD_SERVICE || 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_ENV
+                td(class="right aligned")
+                  code #{process.env.DD_ENV || 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_VERSION
+                td(class="right aligned")
+                  code #{process.env.DD_VERSION || 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_SITE
+                td(class="right aligned")
+                  code #{process.env.DD_SITE || 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_LOGS_ENABLED
+                td(class="right aligned")
+                  code #{process.env.DD_LOGS_ENABLED || 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_TRACE_ENABLED
+                td(class="right aligned")
+                  code #{process.env.DD_TRACE_ENABLED || 'not set'}
+        
+        div(class="column")
+          h5(class="ui header") Azure Configuration
+          table(class="ui very basic compact table")
+            tbody
+              tr
+                td(style="font-weight: bold;") DD_AZURE_SUBSCRIPTION_ID
+                td(class="right aligned")
+                  code #{process.env.DD_AZURE_SUBSCRIPTION_ID ? '***' + process.env.DD_AZURE_SUBSCRIPTION_ID.slice(-8) : 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_AZURE_RESOURCE_GROUP
+                td(class="right aligned")
+                  code #{process.env.DD_AZURE_RESOURCE_GROUP || 'not set'}
+              tr
+                td(style="font-weight: bold;") NODE_ENV
+                td(class="right aligned")
+                  code #{process.env.NODE_ENV || 'not set'}
+              tr
+                td(style="font-weight: bold;") API_BASE_URL
+                td(class="right aligned")
+                  code #{process.env.API_BASE_URL || 'not set'}
+              tr
+                td(style="font-weight: bold;") PORT
+                td(class="right aligned")
+                  code 3000
+              tr
+                td(style="font-weight: bold;") LOG_LEVEL
+                td(class="right aligned")
+                  code #{process.env.LOG_LEVEL || 'info'}
+      
+      div(class="ui divider")
+      
+      div(class="ui two column stackable grid")
+        div(class="column")
+          h5(class="ui header") RUM Configuration
+          table(class="ui very basic compact table")
+            tbody
+              tr
+                td(style="font-weight: bold;") DD_RUM_APPLICATION_ID
+                td(class="right aligned")
+                  code #{process.env.DD_RUM_APPLICATION_ID ? process.env.DD_RUM_APPLICATION_ID.slice(0, 8) + '...' : 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_RUM_CLIENT_TOKEN
+                td(class="right aligned")
+                  code #{process.env.DD_RUM_CLIENT_TOKEN ? 'pub***' + process.env.DD_RUM_CLIENT_TOKEN.slice(-4) : 'not set'}
+        
+        div(class="column")
+          h5(class="ui header") Application Info
+          table(class="ui very basic compact table")
+            tbody
+              tr
+                td(style="font-weight: bold;") Container
+                td(class="right aligned")
+                  code Azure Container Apps
+              tr
+                td(style="font-weight: bold;") Runtime
+                td(class="right aligned")
+                  code Node.js #{process.version}
+              tr
+                td(style="font-weight: bold;") Instrumentation
+                td(class="right aligned")
+                  code Datadog In-Container
+              tr
+                td(style="font-weight: bold;") Hostname
+                td(class="right aligned")
+                  code #{require('os').hostname().slice(0, 12)}...
+    
+    //- JavaScript for toggling env vars panel
+    script.
+      function toggleEnvVars() {
+        var panel = document.getElementById('envVarsPanel');
+        var chevron = document.getElementById('envVarsChevron');
+        
+        if (panel.style.display === 'none') {
+          panel.style.display = 'block';
+          chevron.className = 'chevron up icon';
+          // Track in Datadog RUM
+          if (window.DD_RUM) {
+            window.DD_RUM.addAction('view_environment_variables', {
+              action_type: 'expand'
+            });
+          }
+        } else {
+          panel.style.display = 'none';
+          chevron.className = 'chevron down icon';
+        }
+      }
+    
     h2(class="ui center aligned icon block header")
       i(class="music icon" style="padding: 20px; color:"+background_color)   
         h1(style="font-size:.4em; font-family:Lato") Azure Container Apps Greatest Hits
@@ -14,4 +227,61 @@ html
         button(class="ui button" onclick="parent.open('http://aka.ms/aca-roadmap')") Public Roadmap
         button(class="ui button" onclick="parent.open('https://aka.ms/containerapps-discord')") Discord
         button(class="ui button" onclick="parent.open('https://aka.ms/aca-mailinglist')") Mailing List
+      
+      //- Datadog Error Demo Section
+      div(class="ui segment" style="margin-top: 20px; background-color: #fff3cd; border: 1px solid #ffc107;")
+        h4(style="color: #856404;") 
+          i(class="bug icon")
+          | Datadog Error Tracking Demo
+        p(style="color: #856404; font-size: 0.9em;") Test error tracking and monitoring capabilities:
+        div(class="ui three buttons")
+          button(class="ui orange button" onclick="triggerJSError()") 
+            i(class="exclamation triangle icon")
+            | Frontend JS Error
+          button(class="ui red button" onclick="triggerServerError()") 
+            i(class="server icon")
+            | Backend 500 Error
+          button(class="ui yellow button" onclick="trigger404Error()") 
+            i(class="search icon")
+            | 404 Not Found
+    
+    //- Datadog Error Simulation Scripts
+    script.
+      // Frontend JavaScript error simulation
+      function triggerJSError() {
+        console.error('🐛 Demo: Triggering frontend JavaScript error');
+        // This will be caught by Datadog RUM
+        throw new Error('Demo frontend error - Testing Datadog RUM error tracking!');
+      }
+      
+      // Backend server error simulation
+      function triggerServerError() {
+        console.log('🔴 Demo: Triggering backend 500 error');
+        fetch('/trigger-error?type=server')
+          .then(response => {
+            if (!response.ok) {
+              console.error('Server returned error:', response.status);
+            }
+          })
+          .catch(error => {
+            console.error('Network error:', error);
+            alert('✅ Server error triggered! Check Datadog APM for traces.');
+          });
+      }
+      
+      // 404 error simulation
+      function trigger404Error() {
+        console.log('🟡 Demo: Triggering 404 error');
+        fetch('/trigger-error?type=404')
+          .then(response => {
+            if (!response.ok) {
+              console.error('404 error triggered:', response.status);
+              alert('✅ 404 error triggered! Check Datadog Logs and APM.');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      }
+    
     block content

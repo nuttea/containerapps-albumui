@@ -4,12 +4,99 @@ block content
     div(class="ui attached segment")
       div(class="ui divided items")
         each album in albums
-          div(class="item")
+          div(class="item" style="cursor: pointer; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='white'" onclick=`showAlbumDetails(${album.id})`)
             div(class="ui image small")
-              img(src=album.image_url)
+              img(src=album.imageUrl || album.image_url style="border-radius: 8px;")
             div(class="content")
               div(class="header")
                 span(class="album-title")=album.title
+                i(class="angle right icon" style="float: right; color: #ccc;")
               div(class="meta")
-                span(class="meta-info")=album.artist
-                span(class="meta-info")=album.price
+                span(class="meta-info")
+                  i(class="user icon")
+                  =album.artist
+                span(class="meta-info" style="margin-left: 15px;")
+                  i(class="calendar icon")
+                  =album.year
+              div(class="description" style="margin-top: 10px; color: #666;")
+                | Click to view details
+    
+    //- Album Details Modal
+    div(id="albumModal" class="ui modal")
+      i(class="close icon")
+      div(class="header")
+        span(id="modalTitle") Album Details
+      div(class="content")
+        div(class="ui grid")
+          div(class="six wide column")
+            img(id="modalImage" class="ui fluid image" style="border-radius: 8px;")
+          div(class="ten wide column")
+            h2(id="modalAlbumTitle")
+            div(class="ui list")
+              div(class="item")
+                i(class="user icon")
+                div(class="content")
+                  div(class="header") Artist
+                  div(id="modalArtist")
+              div(class="item")
+                i(class="calendar icon")
+                div(class="content")
+                  div(class="header") Year
+                  div(id="modalYear")
+              div(class="item")
+                i(class="tag icon")
+                div(class="content")
+                  div(class="header") Genre
+                  div(id="modalGenre")
+              div(class="item")
+                i(class="music icon")
+                div(class="content")
+                  div(class="header") Tracks
+                  div(id="modalTracks")
+              div(class="item")
+                i(class="clock icon")
+                div(class="content")
+                  div(class="header") Duration
+                  div(id="modalDuration")
+            p(id="modalDescription" style="margin-top: 20px; font-style: italic;")
+      div(class="actions")
+        button(class="ui green approve button") 
+          i(class="checkmark icon")
+          | Close
+    
+    //- JavaScript for album details
+    script.
+      function showAlbumDetails(albumId) {
+        console.log('Loading album details:', albumId);
+        
+        // Fetch album details from API
+        fetch(`/albums/${albumId}`)
+          .then(response => response.json())
+          .then(album => {
+            // Populate modal with album data
+            document.getElementById('modalTitle').textContent = album.title;
+            document.getElementById('modalAlbumTitle').textContent = album.title;
+            document.getElementById('modalArtist').textContent = album.artist;
+            document.getElementById('modalYear').textContent = album.year;
+            document.getElementById('modalGenre').textContent = album.genre || 'N/A';
+            document.getElementById('modalTracks').textContent = album.tracks || 'N/A';
+            document.getElementById('modalDuration').textContent = album.duration || 'N/A';
+            document.getElementById('modalDescription').textContent = album.description || '';
+            document.getElementById('modalImage').src = album.imageUrl;
+            
+            // Show modal using Semantic UI
+            $('#albumModal').modal('show');
+            
+            // Log to Datadog RUM
+            if (window.DD_RUM) {
+              window.DD_RUM.addAction('view_album_details', {
+                album_id: album.id,
+                album_title: album.title
+              });
+            }
+          })
+          .catch(error => {
+            console.error('Error loading album details:', error);
+            alert('Failed to load album details. Check console for details.');
+          });
+      }

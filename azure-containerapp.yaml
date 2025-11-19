@@ -1,0 +1,225 @@
+# ============================================================================
+# Azure Container Apps Deployment Configuration with Datadog
+# ============================================================================
+# This YAML configuration deploys the Album UI with Datadog observability
+# Using the official Datadog In-Container instrumentation method
+#
+# Reference: https://docs.datadoghq.com/serverless/azure_container_apps/in_container/nodejs/
+#
+# Usage:
+#   az containerapp update \
+#     --name albumui-frontend \
+#     --resource-group <resource-group> \
+#     --yaml azure-containerapp.yaml
+#
+# Prerequisites:
+#   1. Build and push Docker image to your container registry
+#   2. Create Datadog API key secret:
+#      az containerapp secret set --name albumui-frontend \
+#        --resource-group <rg> --secrets datadog-api-key=<your-key>
+#   3. Replace placeholder values below with your actual values
+# ============================================================================
+
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    
+    # Ingress configuration
+    ingress:
+      external: true
+      targetPort: 3000
+      transport: auto
+      allowInsecure: false
+    
+    # Secrets (manage separately via CLI for security)
+    secrets:
+      - name: datadog-api-key
+        # Set via: az containerapp secret set --name <app> --resource-group <rg> \
+        #   --secrets datadog-api-key=<your-datadog-api-key>
+  
+  template:
+    # ============================================================================
+    # CONTAINER CONFIGURATION
+    # ============================================================================
+    containers:
+      # Application container with Datadog in-container instrumentation
+      - name: albumui
+        # Replace with your actual Azure Container Registry image
+        # This image should be built with the Dockerfile that includes serverless-init
+        image: <your-acr-name>.azurecr.io/albumui:latest
+        
+        resources:
+          cpu: 0.5
+          memory: 1.0Gi
+        
+        # ======================================================================
+        # DATADOG ENVIRONMENT VARIABLES
+        # ======================================================================
+        # Reference: https://docs.datadoghq.com/serverless/azure_container_apps/in_container/nodejs/
+        env:
+          # ----------------------------------------------------------------------
+          # Required Datadog Configuration
+          # ----------------------------------------------------------------------
+          
+          # Datadog API Key - from secret (REQUIRED)
+          - name: DD_API_KEY
+            secretRef: datadog-api-key
+          
+          # Datadog site - your region (REQUIRED)
+          # Options: datadoghq.com, us5.datadoghq.com, datadoghq.eu, etc.
+          - name: DD_SITE
+            value: "datadoghq.com"
+          
+          # Service name for Datadog (REQUIRED)
+          - name: DD_SERVICE
+            value: "albumui-frontend"
+          
+          # ----------------------------------------------------------------------
+          # Unified Service Tagging
+          # ----------------------------------------------------------------------
+          
+          # Environment tag (production, staging, development, etc.)
+          - name: DD_ENV
+            value: "production"
+          
+          # Version tag for deployment tracking
+          - name: DD_VERSION
+            value: "1.0"
+          
+          # ----------------------------------------------------------------------
+          # Azure Container Apps Integration (REQUIRED)
+          # ----------------------------------------------------------------------
+          
+          # Azure Subscription ID - Required for Datadog serverless-init
+          - name: DD_AZURE_SUBSCRIPTION_ID
+            value: "<your-azure-subscription-id>"
+          
+          # Azure Resource Group - Optional but recommended
+          - name: DD_AZURE_RESOURCE_GROUP
+            value: "<your-resource-group-name>"
+          
+          # ----------------------------------------------------------------------
+          # Datadog Logs Configuration
+          # ----------------------------------------------------------------------
+          
+          # Enable log collection from stdout/stderr
+          - name: DD_LOGS_ENABLED
+            value: "true"
+          
+          # Enable trace correlation in logs
+          - name: DD_LOGS_INJECTION
+            value: "true"
+          
+          # Set log source for automatic parsing pipeline
+          # Use "nodejs" for Node.js-specific parsing
+          - name: DD_SOURCE
+            value: "nodejs"
+          
+          # ----------------------------------------------------------------------
+          # Custom Tags (Optional)
+          # ----------------------------------------------------------------------
+          
+          # Add custom tags in key:value format, comma-separated
+          - name: DD_TAGS
+            value: "team:frontend,project:albumui"
+          
+          # ----------------------------------------------------------------------
+          # RUM Configuration (for frontend monitoring)
+          # ----------------------------------------------------------------------
+          
+          # Datadog RUM Application ID (get from Datadog RUM UI)
+          - name: DD_RUM_APPLICATION_ID
+            value: "<your-rum-application-id>"
+          
+          # Datadog RUM Client Token (get from Datadog RUM UI)
+          - name: DD_RUM_CLIENT_TOKEN
+            value: "<your-rum-client-token>"
+          
+          # ----------------------------------------------------------------------
+          # Application Configuration
+          # ----------------------------------------------------------------------
+          
+          - name: NODE_ENV
+            value: "production"
+          
+          # Backend API URL (if using separate backend service)
+          - name: API_BASE_URL
+            value: "http://<your-backend-service-url>"
+          
+          # UI background color (optional)
+          - name: BACKGROUND_COLOR
+            value: "#4a6fa5"
+          
+          # Log level for application (debug, info, warn, error)
+          - name: LOG_LEVEL
+            value: "info"
+          
+          # Request timeout in milliseconds
+          - name: TIMEOUT
+            value: "15000"
+        # ======================================================================
+    
+    # Scale configuration
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
+      rules:
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "100"
+
+# ============================================================================
+# DEPLOYMENT NOTES
+# ============================================================================
+#
+# This configuration uses the Datadog In-Container instrumentation method,
+# which embeds serverless-init directly into your application container.
+#
+# Key differences from sidecar method:
+# - No separate Datadog container needed
+# - No shared volumes required
+# - Simpler configuration
+# - Logs captured from stdout/stderr automatically
+#
+# Steps to deploy:
+#
+# 1. Build your Docker image with the updated Dockerfile that includes:
+#    - COPY --from=datadog/serverless-init:latest /datadog-init /app/datadog-init
+#    - ENV NODE_OPTIONS="--require dd-trace/init"
+#    - ENTRYPOINT ["/app/datadog-init"]
+#
+# 2. Push the image to your container registry:
+#    docker build -t <your-acr>.azurecr.io/albumui:latest ./src
+#    docker push <your-acr>.azurecr.io/albumui:latest
+#
+# 3. Set the Datadog API key as a secret:
+#    az containerapp secret set \
+#      --name albumui-frontend \
+#      --resource-group <resource-group> \
+#      --secrets datadog-api-key=<your-datadog-api-key>
+#
+# 4. Get your Azure Subscription ID:
+#    az account show --query id -o tsv
+#
+# 5. Update the YAML file with your values:
+#    - Replace <your-acr-name> with your ACR name
+#    - Replace <your-azure-subscription-id> with your Azure subscription ID
+#    - Replace <your-resource-group-name> with your resource group name
+#    - Replace <your-rum-application-id> with your RUM app ID
+#    - Replace <your-rum-client-token> with your RUM client token
+#    - Replace <your-backend-service-url> with your backend URL (if applicable)
+#
+# 6. Deploy or update the container app:
+#    az containerapp update \
+#      --name albumui-frontend \
+#      --resource-group <resource-group> \
+#      --yaml azure-containerapp.yaml
+#
+# Verification:
+# - APM: https://app.datadoghq.com/apm/services
+# - Logs: https://app.datadoghq.com/logs
+# - RUM: https://app.datadoghq.com/rum/list
+# - Infrastructure: https://app.datadoghq.com/infrastructure
+#
+# ============================================================================

@@ -1,8 +1,49 @@
+// ============================================================================
+// DATADOG TRACER - MUST BE FIRST
+// ============================================================================
+// Initialize Datadog APM tracer before any other imports
+// This enables automatic instrumentation of HTTP, database, and other libraries
+// Note: When using NODE_OPTIONS="--require dd-trace/init" in Dockerfile,
+// this may be redundant but ensures tracer is loaded in all environments
+require('./tracer');
+// ============================================================================
+
 var createError = require("http-errors");
 var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+
+// ============================================================================
+// DATADOG LOGGING SETUP - Winston with console output
+// ============================================================================
+// Winston logger configured for JSON format that Datadog can parse
+// With DD_LOGS_ENABLED=true, serverless-init captures stdout/stderr
+const winston = require('winston');
+
+// Winston logger with JSON format and Datadog trace correlation
+const appLogger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { 
+    service: process.env.DD_SERVICE || 'albumui-frontend',
+    env: process.env.DD_ENV || 'production'
+  },
+  transports: [
+    // Console output - captured by Datadog serverless-init
+    new winston.transports.Console({
+      format: winston.format.json() // JSON format for better parsing
+    })
+  ]
+});
+
+// Export logger for use in other modules
+global.appLogger = appLogger;
+// ============================================================================
 
 var indexRouter = require("./routes/index");
 
