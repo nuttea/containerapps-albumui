@@ -97,10 +97,11 @@ html
             | #{process.env.DD_ENV || 'unknown'}
     
     //- Collapsible Environment Variables Panel
-    div(id="envVarsPanel" class="ui attached segment" style="display: none; max-height: 400px; overflow-y: auto;")
+    div(id="envVarsPanel" class="ui attached segment" style="display: none; max-height: 500px; overflow-y: auto;")
       h4(class="ui dividing header")
         i(class="info circle icon")
         | Current Configuration
+        div(class="sub header" style="margin-top: 5px;") Showing 30+ configuration parameters across 4 categories
       
       div(class="ui two column stackable grid")
         div(class="column")
@@ -128,9 +129,29 @@ html
                 td(class="right aligned")
                   code #{process.env.DD_LOGS_ENABLED || 'not set'}
               tr
+                td(style="font-weight: bold;") DD_LOGS_INJECTION
+                td(class="right aligned")
+                  code #{process.env.DD_LOGS_INJECTION || 'not set'}
+              tr
+                td(style="font-weight: bold;") DD_SOURCE
+                td(class="right aligned")
+                  code #{process.env.DD_SOURCE || 'not set'}
+              tr
                 td(style="font-weight: bold;") DD_TRACE_ENABLED
                 td(class="right aligned")
-                  code #{process.env.DD_TRACE_ENABLED || 'not set'}
+                  code #{process.env.DD_TRACE_ENABLED || 'true'}
+              tr
+                td(style="font-weight: bold;") DD_RUNTIME_METRICS_ENABLED
+                td(class="right aligned")
+                  code #{process.env.DD_RUNTIME_METRICS_ENABLED || 'true'}
+              tr
+                td(style="font-weight: bold;") DD_PROFILING_ENABLED
+                td(class="right aligned")
+                  code #{process.env.DD_PROFILING_ENABLED || 'false'}
+              tr
+                td(style="font-weight: bold;") DD_TAGS
+                td(class="right aligned")
+                  code #{process.env.DD_TAGS || 'none'}
         
         div(class="column")
           h5(class="ui header") Azure Configuration
@@ -160,6 +181,15 @@ html
                 td(style="font-weight: bold;") LOG_LEVEL
                 td(class="right aligned")
                   code #{process.env.LOG_LEVEL || 'info'}
+              tr
+                td(style="font-weight: bold;") TIMEOUT
+                td(class="right aligned")
+                  code #{process.env.TIMEOUT || '15000'}ms
+              tr
+                td(style="font-weight: bold;") BACKGROUND_COLOR
+                td(class="right aligned")
+                  code 
+                    span(style=`background-color: ${process.env.BACKGROUND_COLOR || '#4a6fa5'}; padding: 2px 8px; border-radius: 3px; color: white;`) #{process.env.BACKGROUND_COLOR || '#4a6fa5'}
       
       div(class="ui divider")
       
@@ -176,6 +206,30 @@ html
                 td(style="font-weight: bold;") DD_RUM_CLIENT_TOKEN
                 td(class="right aligned")
                   code #{process.env.DD_RUM_CLIENT_TOKEN ? 'pub***' + process.env.DD_RUM_CLIENT_TOKEN.slice(-4) : 'not set'}
+              tr
+                td(style="font-weight: bold;") Session Sample Rate
+                td(class="right aligned")
+                  code 100%
+              tr
+                td(style="font-weight: bold;") Session Replay Rate
+                td(class="right aligned")
+                  code 100%
+              tr
+                td(style="font-weight: bold;") Track User Interactions
+                td(class="right aligned")
+                  code true
+              tr
+                td(style="font-weight: bold;") Track Resources
+                td(class="right aligned")
+                  code true
+              tr
+                td(style="font-weight: bold;") Track Long Tasks
+                td(class="right aligned")
+                  code true
+              tr
+                td(style="font-weight: bold;") Track Frustrations
+                td(class="right aligned")
+                  code true
         
         div(class="column")
           h5(class="ui header") Application Info
