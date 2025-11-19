@@ -55,6 +55,9 @@ app.set("env", process.env.NODE_ENV);
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
+// Make hostname available to all templates
+app.locals.hostname = require('os').hostname();
+
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

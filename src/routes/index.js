@@ -162,6 +162,7 @@ router.get("/", async function (req, res, next) {
     res.render("index", {
       albums: data.data,
       background_color: background,
+      hostname: require('os').hostname(),
     });
   } catch (err) {
     // ============================================================================

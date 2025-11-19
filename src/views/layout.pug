@@ -196,7 +196,7 @@ html
               tr
                 td(style="font-weight: bold;") Hostname
                 td(class="right aligned")
-                  code #{require('os').hostname().slice(0, 12)}...
+                  code #{hostname ? hostname.slice(0, 12) + '...' : 'N/A'}
     
     //- JavaScript for toggling env vars panel
     script.
